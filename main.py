@@ -13,7 +13,7 @@ from datetime import datetime
 import tkinter as tk
 from tkinter import ttk
 
-__version__ = "0.1.1"
+__version__ = "0.1.3"
 
 from settings import Settings
 from vjoy_output import VJoyController
@@ -140,20 +140,25 @@ class App:
         ttk.Button(p, text="Recenter wheel  (hold in neutral, then click)",
                    command=self.steering.request_recenter).grid(
             row=12, column=0, columnspan=2, sticky="we", padx=10, pady=(10, 2))
+        ttk.Button(p, text="Calibrate steering  (turn wheel left<->right)",
+                   command=self._on_calibrate).grid(
+            row=13, column=0, columnspan=2, sticky="we", padx=10, pady=(0, 2))
+        self.lbl_calib = tk.Label(p, text="", fg="#777", font=("Segoe UI", 8), anchor="w")
+        self.lbl_calib.grid(row=14, column=0, columnspan=2, sticky="w", padx=10)
         ttk.Button(p, text="Reset to defaults",
                    command=self._on_reset_defaults).grid(
-            row=13, column=0, columnspan=2, sticky="we", padx=10, pady=(0, 6))
+            row=15, column=0, columnspan=2, sticky="we", padx=10, pady=(2, 6))
 
         tk.Label(p, text=BUTTON_REF, fg="#555", justify="left",
-                 font=("Segoe UI", 8)).grid(row=14, column=0, columnspan=2,
+                 font=("Segoe UI", 8)).grid(row=16, column=0, columnspan=2,
                                             sticky="w", padx=10, pady=(0, 4))
 
         self.var_record = tk.BooleanVar(value=False)
         ttk.Checkbutton(p, text="Record data (log to CSV)", variable=self.var_record,
-                        command=self._on_record).grid(row=15, column=0, columnspan=2,
+                        command=self._on_record).grid(row=17, column=0, columnspan=2,
                                                        sticky="w", **pad)
         self.lbl_rec = tk.Label(p, text="", fg="#777", font=("Segoe UI", 8), anchor="w")
-        self.lbl_rec.grid(row=16, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 8))
+        self.lbl_rec.grid(row=18, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 8))
 
     def _add_scale(self, p, label, attr, lo, hi, row, to_setting=None, from_setting=None):
         tk.Label(p, text=label).grid(row=row, column=0, sticky="w", padx=10)
@@ -184,6 +189,9 @@ class App:
     def _on_look(self):
         self.settings.look_enabled = self.var_look.get()
         self.settings.save()
+
+    def _on_calibrate(self):
+        self.steering.start_calibration()
 
     def _on_reset_defaults(self):
         self.settings.reset_defaults()
@@ -223,6 +231,14 @@ class App:
             self.lbl_status.config(text=self._status_text, fg="#1a7f1a")
         else:
             self.lbl_status.config(text=self._status_text, fg="#c08000")
+        if self.steering.calibrating:
+            self.lbl_calib.config(text="Calibrating - turn the wheel LEFT <-> RIGHT...",
+                                  fg="#c08000")
+        elif self.settings.steer_axis:
+            self.lbl_calib.config(text="Steering axis calibrated.", fg="#1a7f1a")
+        else:
+            self.lbl_calib.config(text="Not calibrated (turning auto-learns the axis).",
+                                  fg="#777")
         v = max(-1.0, min(1.0, self.steering.value))
         x = 150 + v * 148
         self.canvas.coords(self._bar, min(150, x), 3, max(150, x), 21)

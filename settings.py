@@ -15,6 +15,7 @@ _DEFAULTS = {
     # Gyro-integrated steering (rotation about the controller's Z / hub axis)
     "gyro_scale": 0.001065,  # rad/s per LSB (DualSense/DS4 ~2000 dps full scale)
     "still_thresh": 60,      # LSB; below this the pad is "still" (bias tracking)
+    "steer_axis": None,      # calibrated steering axis [x,y,z]; None = not set
 
     # Right stick -> camera look passthrough
     "look_enabled": True,
@@ -50,8 +51,10 @@ class Settings:
                 setattr(self, k, data[k])
 
     def reset_defaults(self):
+        keep_axis = getattr(self, "steer_axis", None)
         for k, v in _DEFAULTS.items():
             setattr(self, k, v)
+        self.steer_axis = keep_axis      # keep calibration across a feel reset
         self.save()
 
     def save(self):

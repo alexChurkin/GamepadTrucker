@@ -1,20 +1,17 @@
 """Turn controller motion into a steering-wheel angle.
 
-Only rotation about the *steering axis* (turning the pad left/right like a wheel)
-counts. Tilting it toward/away from you (pitch) is ignored.
+Only rotation about the *steering axis* counts as steering; tilting the pad
+toward/away (a different axis) is ignored. A single rotation can't tell steering
+from tilt on its own (both are horizontal axes), so the steering axis is set by
+a quick CALIBRATION: you turn the wheel left<->right once and the dominant
+rotation axis is captured and locked. After that, tilting about other axes is
+rejected.
 
-How: the wheel angle is the signed angle of gravity within the plane
-perpendicular to the steering axis, relative to neutral (captured at recenter).
-Projecting gravity onto that plane removes the tilt-toward/away component, so
-pitch does not move the wheel. The measure is absolute (gravity-based), so it is
-drift-free and returns to center at the neutral pose, and - unlike acos of the
-raw tilt - it is smooth around center, so the center is steady.
-
-  * The steering axis is learned from the gyro direction on the first clear turn
-    and only refined by motions consistent with it, so flips can't corrupt it.
-  * If the pad is tilted so far that gravity nears the axis (the projection
-    becomes tiny and the angle ambiguous), the wheel simply holds its last value
-    instead of jamming, and resumes when the pad comes back.
+The wheel angle itself is the signed angle of gravity within the plane
+perpendicular to that axis, relative to neutral (captured at recenter). Being
+gravity-based it is drift-free, returns to center at the neutral pose, and is
+smooth around center. Bounded (no winding) + pose gating means tumbling/flipping
+the pad never winds it up or jams it.
 """
 
 import math
@@ -22,14 +19,12 @@ import time
 
 
 class GyroSteering:
-    # Wheel rotation (radians) that gives full lock at sensitivity 50.
-    FULL_LOCK_REF = 1.05
+    FULL_LOCK_REF = 1.05   # rotation (rad) for full lock at sensitivity 50
+    CALIB_SECONDS = 3.0
 
     def __init__(self, settings):
         self.s = settings
         self._angle = 0.0
-        self._axis = [0.0, 0.0, 1.0]
-        self._axis_init = False
         self._g0 = None
         self._bias = None
         self._g_prev = None
@@ -37,8 +32,27 @@ class GyroSteering:
         self._recenter_pending = True
         self.value = 0.0
 
+        ax = getattr(settings, "steer_axis", None)
+        if isinstance(ax, (list, tuple)) and len(ax) == 3:
+            self._axis = _unit(list(ax))
+            self._locked = True
+        else:
+            self._axis = [0.0, 0.0, 1.0]
+            self._locked = False
+
+        self._calib = False
+        self._calib_end = None
+        self._M = None
+        self.calibrating = False
+
     def request_recenter(self):
         self._recenter_pending = True
+
+    def start_calibration(self):
+        self._calib = True
+        self.calibrating = True
+        self._calib_end = None
+        self._M = [[0.0] * 3 for _ in range(3)]
 
     def update(self, state):
         now = time.perf_counter()
@@ -59,42 +73,45 @@ class GyroSteering:
         w = [(gyro[i] - self._bias[i]) * sc for i in range(3)]
         speed = math.sqrt(w[0] * w[0] + w[1] * w[1] + w[2] * w[2])
 
+        # --- calibration: capture the dominant rotation axis -----------------
+        if self._calib:
+            if self._calib_end is None:
+                self._calib_end = now + self.CALIB_SECONDS
+            if speed > 0.8:
+                for i in range(3):
+                    for j in range(3):
+                        self._M[i][j] += w[i] * w[j]
+            if now >= self._calib_end:
+                v = _principal(self._M)
+                if v is not None:
+                    self._axis = v
+                    self._locked = True
+                    self.s.steer_axis = v
+                    self.s.save()
+                self._calib = False
+                self.calibrating = False
+                self._recenter_pending = True
+            self.value *= 0.7   # relax to center while calibrating
+            return self.value
+
         if self._recenter_pending or self._g0 is None:
             self._g0 = list(g)
             self._angle = 0.0
             self._recenter_pending = False
 
-        # Learn / refine the steering axis from the gyro direction.
-        if speed > 0.6:
+        # Auto-learn the axis only if it was never calibrated (fallback).
+        if not self._locked and speed > 1.0:
             d = [w[0] / speed, w[1] / speed, w[2] / speed]
-            if not self._axis_init:
-                if speed > 1.0:
-                    self._axis = d
-                    self._axis_init = True
-            else:
-                if _dot(d, self._axis) < 0.0:
-                    d = [-d[0], -d[1], -d[2]]
-                if _dot(d, self._axis) > 0.5:          # only consistent motions
-                    self._axis = _unit([self._axis[i] + 0.03 * (d[i] - self._axis[i])
-                                        for i in range(3)])
+            self._axis = d
         s = self._axis
 
-        # Gravity projected onto the plane perpendicular to the steering axis.
-        # While genuinely steering, gravity stays in that plane (projection
-        # large). While the pad is tilted/tumbled out of the plane the
-        # projection shrinks; then the angle is meaningless, so we HOLD it - and
-        # we use the bounded angle directly (no winding accumulator), so circling
-        # the pad can never wind up the wheel and jam it.
         a0 = _proj_perp(self._g0, s)
         a = _proj_perp(g, s)
-        # Valid steering pose: gravity in the steering plane AND not tilted too
-        # far from neutral (a real turn reaches ~90 deg; beyond that the pad is
-        # being tumbled, not steered).
         in_plane = _dot(a, a) > 0.36 and _dot(a0, a0) > 0.10
         near_neutral = _dot(g, self._g0) > -0.17        # tilt < ~100 deg
         if in_plane and near_neutral:
             self._angle = math.atan2(_dot(_cross(a0, a), s), _dot(a0, a))
-        # else: out of steering range -> keep the last angle (no jam, no swing)
+        # else: out of steering range -> keep last angle
 
         gain = (self.s.sensitivity / 50.0) / self.FULL_LOCK_REF
         t = max(-1.0, min(1.0, self._angle * gain))
@@ -106,7 +123,6 @@ class GyroSteering:
             else:
                 t = (t - math.copysign(dz, t)) / (1.0 - dz)
 
-        # Expo: softer near center (steadier) while still reaching full lock.
         e = max(0.0, min(0.9, self.s.expo))
         t = (1.0 - e) * t + e * t * t * t
         if self.s.invert:
@@ -115,6 +131,18 @@ class GyroSteering:
         k = 1.0 - max(0.0, min(0.95, self.s.smoothing / 100.0))
         self.value += k * (t - self.value)
         return self.value
+
+
+def _principal(M):
+    """Dominant eigenvector of a symmetric 3x3 matrix (power iteration)."""
+    v = [1.0, 1.0, 1.0]
+    for _ in range(60):
+        nv = [M[i][0] * v[0] + M[i][1] * v[1] + M[i][2] * v[2] for i in range(3)]
+        n = math.sqrt(nv[0] * nv[0] + nv[1] * nv[1] + nv[2] * nv[2])
+        if n < 1e-9:
+            return None
+        v = [nv[0] / n, nv[1] / n, nv[2] / n]
+    return v
 
 
 def _unit(v):
@@ -135,11 +163,3 @@ def _cross(a, b):
 def _proj_perp(v, s):
     d = _dot(v, s)
     return [v[0] - d * s[0], v[1] - d * s[1], v[2] - d * s[2]]
-
-
-def _wrap(a):
-    while a > math.pi:
-        a -= 2.0 * math.pi
-    while a <= -math.pi:
-        a += 2.0 * math.pi
-    return a
