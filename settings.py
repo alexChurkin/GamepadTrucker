@@ -7,8 +7,9 @@ import sys
 _DEFAULTS = {
     # Steering feel
     "sensitivity": 50,
-    "deadzone": 4,
+    "deadzone": 5,
     "smoothing": 55,
+    "expo": 0.4,            # 0..0.9; softer near center for a steadier middle
     "invert": False,
 
     # Gyro-integrated steering (rotation about the controller's Z / hub axis)

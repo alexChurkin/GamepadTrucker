@@ -8,10 +8,12 @@ right stick is camera look, and buttons keep their usual DualSense->Xbox layout.
 
 import os
 import sys
+import time
+from datetime import datetime
 import tkinter as tk
 from tkinter import ttk
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 from settings import Settings
 from vjoy_output import VJoyController
@@ -39,6 +41,9 @@ class App:
         self._status_text = "Starting..."
         self._connected = False
         self._last_state = None
+        self._rec = None            # open log file while recording
+        self._rec_t0 = 0.0
+        self._rec_last = 0.0
 
         self.manager = GamepadManager(on_state=self._on_state, on_status=self._on_status)
 
@@ -49,10 +54,28 @@ class App:
 
     def _on_state(self, state):
         self._last_state = state
-        if not self.settings.enabled:
+        if self.settings.enabled:
+            norm = self.steering.update(state)
+            self.controller.update(state, norm)
+        self._record(state)
+
+    def _record(self, state):
+        f = self._rec
+        if f is None:
             return
-        norm = self.steering.update(state)
-        self.controller.update(state, norm)
+        now = time.perf_counter()
+        if now - self._rec_last < 0.01:      # ~100 Hz cap
+            return
+        self._rec_last = now
+        gx, gy, gz = state.gyro
+        ax, ay, az = state.accel
+        ux, uy, uz = self.steering._axis
+        try:
+            f.write("%.3f,%d,%d,%d,%d,%d,%d,%.4f,%.3f,%.3f,%.3f\n" % (
+                now - self._rec_t0, gx, gy, gz, ax, ay, az,
+                self.steering.value, ux, uy, uz))
+        except Exception:
+            pass
 
     def _on_status(self, text, connected, has_motion):
         self._status_text = text
@@ -116,7 +139,14 @@ class App:
 
         tk.Label(p, text=BUTTON_REF, fg="#555", justify="left",
                  font=("Segoe UI", 8)).grid(row=12, column=0, columnspan=2,
-                                            sticky="w", padx=10, pady=(0, 8))
+                                            sticky="w", padx=10, pady=(0, 4))
+
+        self.var_record = tk.BooleanVar(value=False)
+        ttk.Checkbutton(p, text="Record data (log to CSV)", variable=self.var_record,
+                        command=self._on_record).grid(row=13, column=0, columnspan=2,
+                                                       sticky="w", **pad)
+        self.lbl_rec = tk.Label(p, text="", fg="#777", font=("Segoe UI", 8), anchor="w")
+        self.lbl_rec.grid(row=14, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 8))
 
     def _add_scale(self, p, label, attr, lo, hi, row, to_setting=None, from_setting=None):
         tk.Label(p, text=label).grid(row=row, column=0, sticky="w", padx=10)
@@ -147,6 +177,30 @@ class App:
         self.settings.look_enabled = self.var_look.get()
         self.settings.save()
 
+    def _on_record(self):
+        if self.var_record.get():
+            base = (os.path.dirname(sys.executable) if getattr(sys, "frozen", False)
+                    else os.path.dirname(os.path.abspath(__file__)))
+            path = os.path.join(base, "data_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".csv")
+            try:
+                f = open(path, "w", encoding="utf-8")
+                f.write("t,gx,gy,gz,ax,ay,az,steer,axisx,axisy,axisz\n")
+                self._rec_t0 = time.perf_counter()
+                self._rec_last = 0.0
+                self._rec = f
+                self.lbl_rec.config(text="Recording -> " + os.path.basename(path))
+            except Exception as e:
+                self.lbl_rec.config(text="Record failed: %s" % e)
+                self.var_record.set(False)
+        else:
+            f, self._rec = self._rec, None
+            if f:
+                try:
+                    f.close()
+                except Exception:
+                    pass
+            self.lbl_rec.config(text="Saved.")
+
     def _tick(self):
         if self._connected:
             self.lbl_status.config(text=self._status_text, fg="#1a7f1a")
@@ -163,6 +217,12 @@ class App:
 
     def _on_close(self):
         self.manager.stop()
+        f, self._rec = self._rec, None
+        if f:
+            try:
+                f.close()
+            except Exception:
+                pass
         try:
             self.controller.release_all()
         except Exception:

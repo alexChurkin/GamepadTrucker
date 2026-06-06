@@ -4,3 +4,4 @@ dist/
 __pycache__/
 *.pyc
 settings.json
+data_*.csv
