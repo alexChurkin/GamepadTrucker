@@ -69,14 +69,12 @@ class VJoyController:
             pass
 
     # -- public -------------------------------------------------------------
-    def apply(self, steering, throttle, brake, look_x, look_y, buttons):
+    def apply(self, steering, throttle, brake, look_x, look_y):
         self._set(self._u.HID_USAGE_X, self.AXIS_CENTER + steering * (self.AXIS_CENTER - 1))
         self._set(self._u.HID_USAGE_RX, self.AXIS_CENTER + look_x * (self.AXIS_CENTER - 1))
         self._set(self._u.HID_USAGE_RY, self.AXIS_CENTER + look_y * (self.AXIS_CENTER - 1))
         self._set(self._u.HID_USAGE_Z, self.AXIS_MIN + throttle * (self.AXIS_MAX - self.AXIS_MIN))
         self._set(self._u.HID_USAGE_RZ, self.AXIS_MIN + brake * (self.AXIS_MAX - self.AXIS_MIN))
-        for slot, num in BUTTON_MAP.items():
-            self._btn(num, bool(buttons.get(slot)))
 
     def neutral(self):
         if not self._d:

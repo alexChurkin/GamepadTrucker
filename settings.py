@@ -5,11 +5,11 @@ import os
 import sys
 
 _DEFAULTS = {
-    # Steering feel
-    "sensitivity": 50,
-    "deadzone": 5,
-    "smoothing": 55,
-    "expo": 0.4,            # 0..0.9; softer near center for a steadier middle
+    # Steering feel (tuned defaults for ETS2/ATS comfort)
+    "sensitivity": 55,      # full lock at a comfortable ~55 deg of wheel rotation
+    "deadzone": 4,
+    "smoothing": 55,        # steady wheel without feeling laggy
+    "expo": 0.35,           # 0..0.9; softer near center for a steadier middle
     "invert": False,
 
     # Gyro-integrated steering (rotation about the controller's Z / hub axis)
@@ -48,6 +48,11 @@ class Settings:
         for k in _DEFAULTS:
             if k in data:
                 setattr(self, k, data[k])
+
+    def reset_defaults(self):
+        for k, v in _DEFAULTS.items():
+            setattr(self, k, v)
+        self.save()
 
     def save(self):
         try:

@@ -21,8 +21,9 @@ from gyro_steering import GyroSteering
 from pc_controller import PCController
 from hid_gamepad import GamepadManager
 
-BUTTON_REF = ("In ETS2 bind once to the vJoy device: Steering=X axis (wheel),\n"
-              "Throttle=Z, Brake=RZ, Camera=RX/RY, and the buttons as you like.")
+BUTTON_REF = ("ETS2/ATS: bind vJoy axes - Steering=X, Throttle=Z, Brake=RZ, Look=RX/RY.\n"
+              "D-pad: signals (<,>), hazard (^), ignition (v).  L1/R1 gears down/up.\n"
+              "R3 = view zoom (mouse wheel).  Other buttons = default keys.")
 
 
 def resource_path(name):
@@ -121,32 +122,38 @@ class App:
                         command=self._on_enabled).grid(row=5, column=0, columnspan=2,
                                                        sticky="w", **pad)
 
+        self._scales = {}
         self._add_scale(p, "Sensitivity", "sensitivity", 1, 100, 6)
         self._add_scale(p, "Smoothing (%)", "smoothing", 0, 95, 7)
         self._add_scale(p, "Dead zone (%)", "deadzone", 0, 30, 8)
-        self._add_scale(p, "Camera look deadzone (%)", "look_deadzone", 0, 40, 9)
+        self._add_scale(p, "Expo (%)", "expo", 0, 90, 9,
+                        to_setting=lambda v: v / 100.0, from_setting=lambda s: s * 100.0)
+        self._add_scale(p, "Camera look deadzone (%)", "look_deadzone", 0, 40, 10)
 
         self.var_invert = tk.BooleanVar(value=self.settings.invert)
         ttk.Checkbutton(p, text="Invert steering", variable=self.var_invert,
-                        command=self._on_invert).grid(row=10, column=0, sticky="w", **pad)
+                        command=self._on_invert).grid(row=11, column=0, sticky="w", **pad)
         self.var_look = tk.BooleanVar(value=self.settings.look_enabled)
         ttk.Checkbutton(p, text="Right stick = camera look", variable=self.var_look,
-                        command=self._on_look).grid(row=10, column=1, sticky="w", **pad)
+                        command=self._on_look).grid(row=11, column=1, sticky="w", **pad)
 
         ttk.Button(p, text="Recenter wheel  (hold in neutral, then click)",
                    command=self.steering.request_recenter).grid(
-            row=11, column=0, columnspan=2, sticky="we", padx=10, pady=(10, 4))
+            row=12, column=0, columnspan=2, sticky="we", padx=10, pady=(10, 2))
+        ttk.Button(p, text="Reset to defaults",
+                   command=self._on_reset_defaults).grid(
+            row=13, column=0, columnspan=2, sticky="we", padx=10, pady=(0, 6))
 
         tk.Label(p, text=BUTTON_REF, fg="#555", justify="left",
-                 font=("Segoe UI", 8)).grid(row=12, column=0, columnspan=2,
+                 font=("Segoe UI", 8)).grid(row=14, column=0, columnspan=2,
                                             sticky="w", padx=10, pady=(0, 4))
 
         self.var_record = tk.BooleanVar(value=False)
         ttk.Checkbutton(p, text="Record data (log to CSV)", variable=self.var_record,
-                        command=self._on_record).grid(row=13, column=0, columnspan=2,
+                        command=self._on_record).grid(row=15, column=0, columnspan=2,
                                                        sticky="w", **pad)
         self.lbl_rec = tk.Label(p, text="", fg="#777", font=("Segoe UI", 8), anchor="w")
-        self.lbl_rec.grid(row=14, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 8))
+        self.lbl_rec.grid(row=16, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 8))
 
     def _add_scale(self, p, label, attr, lo, hi, row, to_setting=None, from_setting=None):
         tk.Label(p, text=label).grid(row=row, column=0, sticky="w", padx=10)
@@ -162,6 +169,7 @@ class App:
         scale = ttk.Scale(p, from_=lo, to=hi, variable=var, command=on_change)
         scale.grid(row=row, column=1, sticky="we", padx=10, pady=2)
         scale.bind("<ButtonRelease-1>", lambda e: self.settings.save())
+        self._scales[attr] = (var, from_setting)
 
     def _on_enabled(self):
         self.settings.enabled = self.var_enabled.get()
@@ -176,6 +184,15 @@ class App:
     def _on_look(self):
         self.settings.look_enabled = self.var_look.get()
         self.settings.save()
+
+    def _on_reset_defaults(self):
+        self.settings.reset_defaults()
+        for attr, (var, from_setting) in self._scales.items():
+            val = getattr(self.settings, attr)
+            var.set(from_setting(val) if from_setting else val)
+        self.var_invert.set(self.settings.invert)
+        self.var_look.set(self.settings.look_enabled)
+        self.steering.request_recenter()
 
     def _on_record(self):
         if self.var_record.get():

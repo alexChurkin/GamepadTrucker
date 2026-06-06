@@ -23,7 +23,7 @@ import time
 
 class GyroSteering:
     # Wheel rotation (radians) that gives full lock at sensitivity 50.
-    FULL_LOCK_REF = 1.30
+    FULL_LOCK_REF = 1.05
 
     def __init__(self, settings):
         self.s = settings
