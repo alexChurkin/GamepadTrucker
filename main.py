@@ -13,7 +13,7 @@ from datetime import datetime
 import tkinter as tk
 from tkinter import ttk
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 from settings import Settings
 from vjoy_output import VJoyController
@@ -132,10 +132,8 @@ class App:
 
         self.var_invert = tk.BooleanVar(value=self.settings.invert)
         ttk.Checkbutton(p, text="Invert steering", variable=self.var_invert,
-                        command=self._on_invert).grid(row=11, column=0, sticky="w", **pad)
-        self.var_look = tk.BooleanVar(value=self.settings.look_enabled)
-        ttk.Checkbutton(p, text="Right stick = camera look", variable=self.var_look,
-                        command=self._on_look).grid(row=11, column=1, sticky="w", **pad)
+                        command=self._on_invert).grid(row=11, column=0, columnspan=2,
+                                                      sticky="w", **pad)
 
         ttk.Button(p, text="Recenter wheel  (hold in neutral, then click)",
                    command=self.steering.request_recenter).grid(
@@ -186,10 +184,6 @@ class App:
         self.settings.invert = self.var_invert.get()
         self.settings.save()
 
-    def _on_look(self):
-        self.settings.look_enabled = self.var_look.get()
-        self.settings.save()
-
     def _on_calibrate(self):
         self.steering.start_calibration()
 
@@ -199,7 +193,6 @@ class App:
             val = getattr(self.settings, attr)
             var.set(from_setting(val) if from_setting else val)
         self.var_invert.set(self.settings.invert)
-        self.var_look.set(self.settings.look_enabled)
         self.steering.request_recenter()
 
     def _on_record(self):

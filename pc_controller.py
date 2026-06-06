@@ -64,11 +64,9 @@ class PCController:
         self._held = {}   # slot -> action currently active
 
     def update(self, state, steering_norm):
-        look_x = look_y = 0.0
-        if self.s.look_enabled:
-            dz = self.s.look_deadzone / 100.0
-            look_x = _dz((state.rx - 128) / 127.0, dz)
-            look_y = _dz((state.ry - 128) / 127.0, dz)
+        dz = self.s.look_deadzone / 100.0
+        look_x = _dz((state.rx - 128) / 127.0, dz)
+        look_y = _dz((state.ry - 128) / 127.0, dz)
         self.vjoy.apply(_c(steering_norm), state.r2 / 255.0, state.l2 / 255.0,
                         _c(look_x), _c(look_y))
 

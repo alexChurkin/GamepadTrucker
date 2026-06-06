@@ -6,10 +6,10 @@ import sys
 
 _DEFAULTS = {
     # Steering feel (tuned defaults for ETS2/ATS comfort)
-    "sensitivity": 55,      # full lock at a comfortable ~55 deg of wheel rotation
+    "sensitivity": 42,
     "deadzone": 4,
-    "smoothing": 55,        # steady wheel without feeling laggy
-    "expo": 0.35,           # 0..0.9; softer near center for a steadier middle
+    "smoothing": 81,        # steady wheel
+    "expo": 0.84,           # 0..0.9; softer near center for a steadier middle
     "invert": False,
 
     # Gyro-integrated steering (rotation about the controller's Z / hub axis)
@@ -17,8 +17,7 @@ _DEFAULTS = {
     "still_thresh": 60,      # LSB; below this the pad is "still" (bias tracking)
     "steer_axis": None,      # calibrated steering axis [x,y,z]; None = not set
 
-    # Right stick -> camera look passthrough
-    "look_enabled": True,
+    # Right stick -> camera look passthrough (always on)
     "look_deadzone": 12,    # % stick deadzone for camera
 
     "enabled": True,
