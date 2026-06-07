@@ -1,8 +1,8 @@
-# GamepadTrucker — gamepad + gyro
+# GamepadTrucker – gamepad + gyro
 
 Drive **Euro Truck Simulator 2 / American Truck Simulator** with a
 **DualShock 4** or **DualSense** over **Bluetooth** (or USB). The controller's
-**gyroscope is the steering wheel** — hold the pad like a wheel and tilt it.
+**gyroscope is the steering wheel** – hold the pad like a wheel and tilt it.
 
 > Русская версия: [README_ru.md](README_ru.md)
 
@@ -15,9 +15,9 @@ Drive **Euro Truck Simulator 2 / American Truck Simulator** with a
 The steering, pedals and camera go through a **vJoy** device; the buttons
 emulate the game's **default keyboard shortcuts** (and one mouse action). Because
 vJoy is a generic DirectInput device, ETS2/ATS treats its steering axis as a
-real **wheel** — full lock-to-lock at any speed, with no gamepad steering assist:
+real **wheel** – full lock-to-lock at any speed, with no gamepad steering assist:
 
-- gyro tilt → **steering** (vJoy X — a real wheel, full lock at any speed)
+- gyro tilt → **steering** (vJoy X – a real wheel, full lock at any speed)
 - R2 / L2 → **throttle / brake** (vJoy Z / RZ axes)
 - right stick → **camera look** (vJoy RX / RY axes)
 - buttons + d-pad → **default keyboard keys** + a mouse action (no in-game setup)
@@ -32,7 +32,7 @@ while waiting for the game). Set up once:
 1. Click **Install telemetry plugin (ETS2/ATS)** in the app (auto-detects the
    Steam installs and copies `scs-telemetry.dll` into each game).
 2. Start the game; on first launch **allow** the telemetry access prompt.
-3. Drive — the lightbar follows the RPM. Toggle it with
+3. Drive – the lightbar follows the RPM. Toggle it with
    *Lightbar = engine RPM*.
 
 ## What you need
@@ -46,7 +46,7 @@ while waiting for the game). Set up once:
 
 - **Packaged:** double-click `dist\GamepadTrucker.exe`
   (install vJoy once via `setup_vjoy.ps1` if you don't have it).
-- **From source:** double-click **`run.bat`** — sets up the venv, installs deps,
+- **From source:** double-click **`run.bat`** – sets up the venv, installs deps,
   installs/configures vJoy if needed, and starts the app.
 
 ![App window](assets/Screenshot.png)
@@ -100,14 +100,14 @@ in the game.
 
 ## Steering tuning (in-app)
 
-- **Recenter wheel** — hold the pad in your neutral grip, then click.
-- **Calibrate steering** — turn the wheel left↔right so tilt isn't read as steering.
-- **Sensitivity** — how much rotation reaches full lock.
-- **Smoothing** — higher = smoother but laggier (kills jitter).
-- **Dead zone** — ignore small rotation near center.
-- **Expo** — softer near center for a steadier middle, full lock still reachable.
-- **Invert steering** — flip left/right.
-- **Reset to defaults** — restore the tuned default settings (keeps calibration).
+- **Recenter wheel** – hold the pad in your neutral grip, then click.
+- **Calibrate steering** – turn the wheel left↔right so tilt isn't read as steering.
+- **Sensitivity** – how much rotation reaches full lock.
+- **Smoothing** – higher = smoother but laggier (kills jitter).
+- **Dead zone** – ignore small rotation near center.
+- **Expo** – softer near center for a steadier middle, full lock still reachable.
+- **Invert steering** – flip left/right.
+- **Reset to defaults** – restore the tuned default settings (keeps calibration).
 
 Camera look is always on (right stick), with its own dead zone. Settings save to
 `settings.json` next to the app.
