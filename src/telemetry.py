@@ -14,7 +14,8 @@ import ctypes
 from ctypes import wintypes
 import os
 import struct
-import sys
+
+from paths import resource
 
 MMF_NAME = "Local\\SCSTelemetry"
 MMF_SIZE = 32 * 1024
@@ -27,10 +28,6 @@ _OFF_RPM = 952
 _OFF_ENGINE_ON = 1576
 
 GAME_NAMES = {1: "ETS2", 2: "ATS"}
-
-
-def _res_dir():
-    return getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 
 
 # ---------------------------------------------------------------------------
@@ -147,8 +144,8 @@ def install_plugins():
         return [("", "No ETS2/ATS Steam install found")]
     for label, gdir in games:
         ok = []
-        for arch, dll in (("win_x64", os.path.join(_res_dir(), "plugins", "win_x64", PLUGIN_DLL)),
-                          ("win_x86", os.path.join(_res_dir(), "plugins", "win_x86", PLUGIN_DLL))):
+        for arch, dll in (("win_x64", resource(os.path.join("plugins", "win_x64", PLUGIN_DLL))),
+                          ("win_x86", resource(os.path.join("plugins", "win_x86", PLUGIN_DLL)))):
             bindir = os.path.join(gdir, "bin", arch)
             if not os.path.isdir(bindir) or not os.path.isfile(dll):
                 continue

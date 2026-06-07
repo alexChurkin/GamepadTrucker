@@ -21,5 +21,5 @@ if errorlevel 1 (
     powershell -ExecutionPolicy Bypass -File setup_vjoy.ps1
 )
 
-".venv\Scripts\pythonw.exe" main.py
+".venv\Scripts\pythonw.exe" src\main.py
 endlocal

@@ -1,4 +1,7 @@
-"""Capture live accel/gyro from the controller for analysis."""
+"""Capture live accel/gyro from the controller for analysis.
+
+Run:  .venv\\Scripts\\python.exe src\\capture_log.py
+"""
 import time, math
 import hid_gamepad as hg
 

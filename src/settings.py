@@ -1,8 +1,9 @@
-"""JSON-backed settings stored next to the executable/script."""
+"""JSON-backed settings stored next to the executable (or project root)."""
 
 import json
 import os
-import sys
+
+from paths import config_dir
 
 _DEFAULTS = {
     # Steering feel (tuned defaults for ETS2/ATS comfort)
@@ -28,11 +29,7 @@ _DEFAULTS = {
 
 
 def _config_path():
-    if getattr(sys, "frozen", False):
-        base = os.path.dirname(sys.executable)
-    else:
-        base = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(base, "settings.json")
+    return os.path.join(config_dir(), "settings.json")
 
 
 class Settings:

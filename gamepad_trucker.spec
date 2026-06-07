@@ -16,8 +16,8 @@ datas += [('plugins/win_x64/scs-telemetry.dll', 'plugins/win_x64'),
           ('plugins/win_x86/scs-telemetry.dll', 'plugins/win_x86')]  # telemetry plugin
 
 a = Analysis(
-    ['main.py'],
-    pathex=[],
+    ['src/main.py'],
+    pathex=['src'],
     binaries=[],
     datas=datas,
     hiddenimports=['hid'],

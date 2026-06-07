@@ -1,20 +1,17 @@
 """GamepadTrucker - drive ETS2/ATS with a DualShock 4 / DualSense.
 
-The whole controller is republished as a virtual Xbox 360 pad (ViGEmBus), so
-the game uses its built-in gamepad bindings with no manual setup. The gyroscope
-replaces the left stick as the steering wheel; triggers are throttle/brake, the
-right stick is camera look, and buttons keep their usual DualSense->Xbox layout.
+Steering/pedals/camera go through one vJoy device (so the game treats the gyro
+as a real wheel - full lock at any speed); buttons emulate the game's default
+keyboard keys. Optional: the controller lightbar shows engine RPM via telemetry.
 """
 
 import os
-import sys
 import time
 from datetime import datetime
 import tkinter as tk
 from tkinter import ttk
 
-__version__ = "0.1.6"
-
+from paths import resource, config_dir
 from settings import Settings
 from vjoy_output import VJoyController
 from gyro_steering import GyroSteering
@@ -23,14 +20,11 @@ from hid_gamepad import GamepadManager
 import telemetry as telem
 import dualsense_led
 
+__version__ = "0.1.6"
+
 BUTTON_REF = ("ETS2/ATS: bind vJoy axes - Steering=X, Throttle=Z, Brake=RZ, Look=RX/RY.\n"
               "D-pad: signals (<,>), hazard (^), ignition (v).  L1 air horn, R1 cruise.\n"
               "Touchpad = horn, Cross = beacon, R3 = view zoom.  Share = map, Options = menu.")
-
-
-def resource_path(name):
-    base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(base, name)
 
 
 class App:
@@ -94,7 +88,7 @@ class App:
         p.title("GamepadTrucker  v" + __version__)
         p.resizable(False, False)
         try:
-            p.iconbitmap(resource_path("app_icon.ico"))
+            p.iconbitmap(resource("app_icon.ico"))
         except Exception:
             pass
         pad = dict(padx=10, pady=4)
@@ -244,9 +238,8 @@ class App:
 
     def _on_record(self):
         if self.var_record.get():
-            base = (os.path.dirname(sys.executable) if getattr(sys, "frozen", False)
-                    else os.path.dirname(os.path.abspath(__file__)))
-            path = os.path.join(base, "data_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".csv")
+            path = os.path.join(config_dir(),
+                                "data_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".csv")
             try:
                 f = open(path, "w", encoding="utf-8")
                 f.write("t,gx,gy,gz,ax,ay,az,steer,axisx,axisy,axisz\n")
