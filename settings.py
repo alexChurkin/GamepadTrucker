@@ -20,6 +20,9 @@ _DEFAULTS = {
     # Right stick -> camera look passthrough (always on)
     "look_deadzone": 12,    # % stick deadzone for camera
 
+    # ETS2/ATS telemetry -> DualSense lightbar color by engine RPM
+    "led_rpm_enabled": True,
+
     "enabled": True,
 }
 

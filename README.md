@@ -21,6 +21,19 @@ real **wheel** — full lock-to-lock at any speed, with no gamepad steering assi
 - R2 / L2 → **throttle / brake** (vJoy Z / RZ axes)
 - right stick → **camera look** (vJoy RX / RY axes)
 - buttons + d-pad → **default keyboard keys** + a mouse action (no in-game setup)
+- optional: **DualSense lightbar shows engine RPM** (green → yellow → red)
+
+## DualSense lightbar = engine RPM (optional)
+
+With the SCS telemetry plugin installed, the DualSense lightbar turns green at
+low revs, yellow in the mid band and red near the redline (white while waiting
+for the game). Set up once:
+
+1. Click **Install telemetry plugin (ETS2/ATS)** in the app (auto-detects the
+   Steam installs and copies `scs-telemetry.dll` into each game).
+2. Start the game; on first launch **allow** the telemetry access prompt.
+3. Drive — the lightbar follows the RPM. Toggle it with
+   *DualSense lightbar = engine RPM*.
 
 ## What you need
 

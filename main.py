@@ -13,13 +13,15 @@ from datetime import datetime
 import tkinter as tk
 from tkinter import ttk
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 
 from settings import Settings
 from vjoy_output import VJoyController
 from gyro_steering import GyroSteering
 from pc_controller import PCController
 from hid_gamepad import GamepadManager
+import telemetry as telem
+import dualsense_led
 
 BUTTON_REF = ("ETS2/ATS: bind vJoy axes - Steering=X, Throttle=Z, Brake=RZ, Look=RX/RY.\n"
               "D-pad: signals (<,>), hazard (^), ignition (v).  L1/R1 gears down/up.\n"
@@ -47,6 +49,8 @@ class App:
         self._rec_last = 0.0
 
         self.manager = GamepadManager(on_state=self._on_state, on_status=self._on_status)
+        self.telemetry = telem.Telemetry()
+        self._tele_text = ""
 
         self._build_ui()
         self.manager.start()
@@ -156,7 +160,19 @@ class App:
                         command=self._on_record).grid(row=17, column=0, columnspan=2,
                                                        sticky="w", **pad)
         self.lbl_rec = tk.Label(p, text="", fg="#777", font=("Segoe UI", 8), anchor="w")
-        self.lbl_rec.grid(row=18, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 8))
+        self.lbl_rec.grid(row=18, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 4))
+
+        ttk.Separator(p, orient="horizontal").grid(row=19, column=0, columnspan=2,
+                                                   sticky="we", padx=10, pady=4)
+        self.var_led = tk.BooleanVar(value=self.settings.led_rpm_enabled)
+        ttk.Checkbutton(p, text="DualSense lightbar = engine RPM (ETS2/ATS telemetry)",
+                        variable=self.var_led, command=self._on_led).grid(
+            row=20, column=0, columnspan=2, sticky="w", **pad)
+        ttk.Button(p, text="Install telemetry plugin (ETS2/ATS)",
+                   command=self._on_install_plugin).grid(
+            row=21, column=0, columnspan=2, sticky="we", padx=10, pady=(0, 2))
+        self.lbl_tele = tk.Label(p, text="", fg="#777", font=("Segoe UI", 8), anchor="w")
+        self.lbl_tele.grid(row=22, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 8))
 
     def _add_scale(self, p, label, attr, lo, hi, row, to_setting=None, from_setting=None):
         tk.Label(p, text=label).grid(row=row, column=0, sticky="w", padx=10)
@@ -186,6 +202,29 @@ class App:
 
     def _on_calibrate(self):
         self.steering.start_calibration()
+
+    def _on_led(self):
+        self.settings.led_rpm_enabled = self.var_led.get()
+        if not self.settings.led_rpm_enabled:
+            self.manager.set_led(None)      # stop touching the lightbar
+        self.settings.save()
+
+    def _on_install_plugin(self):
+        results = telem.install_plugins()
+        self.lbl_tele.config(text="; ".join("%s: %s" % r if r[0] else r[1]
+                                             for r in results), fg="#555")
+
+    def _update_telemetry(self):
+        if not self.settings.led_rpm_enabled:
+            self._tele_text = ""
+            return
+        t = self.telemetry.read()
+        if t and t["active"]:
+            self.manager.set_led(dualsense_led.rpm_to_rgb(t["rpm"], t["rpm_max"]))
+            self._tele_text = "Telemetry %s: %d rpm" % (t["game"], int(t["rpm"]))
+        else:
+            self.manager.set_led((255, 255, 255))   # white standby until game seen
+            self._tele_text = "Telemetry: waiting for game..."
 
     def _on_reset_defaults(self):
         self.settings.reset_defaults()
@@ -239,10 +278,20 @@ class App:
         if st is not None:
             self.pb_gas["value"] = st.r2 * 100.0 / 255.0
             self.pb_brake["value"] = st.l2 * 100.0 / 255.0
+        self._update_telemetry()
+        self.lbl_tele.config(text=self._tele_text)
         self.root.after(33, self._tick)
 
     def _on_close(self):
+        try:
+            self.manager.set_led((0, 0, 0))   # lightbar off on exit
+        except Exception:
+            pass
         self.manager.stop()
+        try:
+            self.telemetry.close()
+        except Exception:
+            pass
         f, self._rec = self._rec, None
         if f:
             try:

@@ -129,6 +129,38 @@ def _parse(kind, data):
     return st
 
 
+def output_report_length(path):
+    """Windows OutputReportByteLength for a HID device path (writes must be this
+    long). Returns 0 if it can't be determined."""
+    try:
+        import ctypes
+        from ctypes import wintypes
+        k = ctypes.windll.kernel32
+        hidd = ctypes.windll.hid
+        p = path.decode() if isinstance(path, bytes) else path
+        h = k.CreateFileW(ctypes.c_wchar_p(p), 0x80000000 | 0x40000000, 3,
+                          None, 3, 0, None)
+        if h == 0 or h == -1 or h == 0xFFFFFFFFFFFFFFFF:
+            return 0
+
+        class CAPS(ctypes.Structure):
+            _fields_ = [("Usage", wintypes.USHORT), ("UsagePage", wintypes.USHORT),
+                        ("In", wintypes.USHORT), ("Out", wintypes.USHORT),
+                        ("Feat", wintypes.USHORT), ("Res", wintypes.USHORT * 17),
+                        ("f", wintypes.USHORT * 10)]
+        pp = ctypes.c_void_p()
+        out = 0
+        if hidd.HidD_GetPreparsedData(h, ctypes.byref(pp)):
+            c = CAPS()
+            hidd.HidP_GetCaps(pp, ctypes.byref(c))
+            out = int(c.Out)
+            hidd.HidD_FreePreparsedData(pp)
+        k.CloseHandle(h)
+        return out
+    except Exception:
+        return 0
+
+
 def find_controller():
     """Return (path, kind, name) of the first connected Sony pad, or None."""
     best = None
@@ -163,6 +195,15 @@ class GamepadManager:
         self.kind = None
         self.name = None
         self.has_motion = False
+        self.bt = False                 # DualSense over Bluetooth (output 0x31)
+        self._out_len = 0               # device OutputReportByteLength (pad writes)
+        self._led = None                # pending (r,g,b) for the lightbar
+        self._led_sent = None
+        self._led_t = 0.0
+
+    def set_led(self, rgb):
+        """rgb: (r,g,b) tuple or None. Applied on the read thread (DualSense)."""
+        self._led = rgb
 
     def start(self):
         if self._running:
@@ -196,6 +237,7 @@ class GamepadManager:
                     dev.open_path(path)
                     dev.set_nonblocking(False)
                     self.kind, self.name = kind, name
+                    self._out_len = output_report_length(path)
                     self._enable_full_mode(dev, kind)
                     self._status("{} connected".format(name), True, False)
                 except Exception as e:
@@ -218,6 +260,9 @@ class GamepadManager:
                     continue
                 if not self.has_motion:
                     self._status("{} active (gyro on)".format(self.name), True, True)
+                if self.kind == "dualsense":
+                    self.bt = (data[0] == 0x31)
+                    self._apply_led(dev)
                 if self.on_state:
                     self.on_state(st)
             except Exception:
@@ -235,6 +280,25 @@ class GamepadManager:
                 dev.close()
             except Exception:
                 pass
+
+    def _apply_led(self, dev):
+        rgb = self._led
+        if rgb is None:
+            return
+        # Send on change, or every ~0.3 s as a keepalive.
+        now = time.time()
+        if rgb == self._led_sent and (now - self._led_t) < 0.3:
+            return
+        try:
+            import dualsense_led
+            report = bytearray(dualsense_led.build_report(self.bt, rgb[0], rgb[1], rgb[2]))
+            if self._out_len and len(report) < self._out_len:   # Windows wants full length
+                report += bytes(self._out_len - len(report))
+            dev.write(bytes(report))
+            self._led_sent = rgb
+            self._led_t = now
+        except Exception:
+            pass
 
     @staticmethod
     def _enable_full_mode(dev, kind):
