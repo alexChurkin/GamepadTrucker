@@ -1,4 +1,4 @@
-# Install vJoy (if missing) and configure device #1 for Truck Remote Server V2.
+# Install vJoy (if missing) and configure device #1 for GamepadTrucker.
 #   powershell -ExecutionPolicy Bypass -File setup_vjoy.ps1
 # Self-elevates (driver install + device config need admin).
 

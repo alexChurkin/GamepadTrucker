@@ -1,4 +1,4 @@
-# Truck Remote Server V2 — gamepad + gyro
+# GamepadTrucker — gamepad + gyro
 
 Drive **Euro Truck Simulator 2 / American Truck Simulator** with a
 **DualShock 4** or **DualSense** over **Bluetooth** (or USB). The controller's
@@ -6,7 +6,7 @@ Drive **Euro Truck Simulator 2 / American Truck Simulator** with a
 
 > Русская версия: [README_ru.md](README_ru.md)
 
-![Truck Remote Server V2](Screenshot.png)
+![GamepadTrucker](assets/illustration.png)
 
 ---
 
@@ -44,10 +44,12 @@ while waiting for the game). Set up once:
 
 ## Run it
 
-- **Packaged:** double-click `dist\TruckRemoteServerV2.exe`
+- **Packaged:** double-click `dist\GamepadTrucker.exe`
   (install vJoy once via `setup_vjoy.ps1` if you don't have it).
 - **From source:** double-click **`run.bat`** — sets up the venv, installs deps,
   installs/configures vJoy if needed, and starts the app.
+
+![App window](assets/Screenshot.png)
 
 ## Build the .exe
 
@@ -55,7 +57,7 @@ while waiting for the game). Set up once:
 powershell -ExecutionPolicy Bypass -File build.ps1
 ```
 
-Single-file `dist\TruckRemoteServerV2.exe` (PyInstaller). `hidapi` and pyvjoy's
+Single-file `dist\GamepadTrucker.exe` (PyInstaller). `hidapi` and pyvjoy's
 `vJoyInterface.dll` are bundled; the target PC still needs the **vJoy driver**.
 
 ## First run (calibrate the wheel)

@@ -1,4 +1,4 @@
-"""Truck Remote Server V2 - drive ETS2/ATS with a DualShock 4 / DualSense.
+"""GamepadTrucker - drive ETS2/ATS with a DualShock 4 / DualSense.
 
 The whole controller is republished as a virtual Xbox 360 pad (ViGEmBus), so
 the game uses its built-in gamepad bindings with no manual setup. The gyroscope
@@ -91,7 +91,7 @@ class App:
     # -- UI -----------------------------------------------------------------
     def _build_ui(self):
         p = self.root
-        p.title("Truck Remote Server V2  v" + __version__)
+        p.title("GamepadTrucker  v" + __version__)
         p.resizable(False, False)
         try:
             p.iconbitmap(resource_path("app_icon.ico"))
@@ -320,7 +320,7 @@ def _set_app_id():
     try:
         import ctypes
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
-            "AlexChurkin.TruckRemoteServerV2")
+            "AlexChurkin.GamepadTrucker")
     except Exception:
         pass
 

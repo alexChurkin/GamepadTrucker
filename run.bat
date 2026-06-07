@@ -1,5 +1,5 @@
 @echo off
-REM Run Truck Remote Server V2 from source.
+REM Run GamepadTrucker from source.
 REM Creates a local virtual environment on first run, installs dependencies,
 REM then launches the app. Just double-click this file.
 

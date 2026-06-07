@@ -1,6 +1,6 @@
-# Build a single-file TruckRemoteServerV2.exe with PyInstaller.
+# Build a single-file GamepadTrucker.exe with PyInstaller.
 # Usage:  powershell -ExecutionPolicy Bypass -File build.ps1
-# Output: dist\TruckRemoteServerV2.exe
+# Output: dist\GamepadTrucker.exe
 
 $ErrorActionPreference = "Stop"
 Set-Location -Path $PSScriptRoot
@@ -17,12 +17,12 @@ Write-Host "[build] Installing dependencies + PyInstaller..."
 & $venvPython -m pip install pyinstaller
 
 Write-Host "[build] Running PyInstaller..."
-& $venvPython -m PyInstaller truck_remote_v2.spec --noconfirm --clean
+& $venvPython -m PyInstaller gamepad_trucker.spec --noconfirm --clean
 
-if (Test-Path ".\dist\TruckRemoteServerV2.exe") {
+if (Test-Path ".\dist\GamepadTrucker.exe") {
     Write-Host ""
-    Write-Host "[build] Done -> dist\TruckRemoteServerV2.exe" -ForegroundColor Green
+    Write-Host "[build] Done -> dist\GamepadTrucker.exe" -ForegroundColor Green
     Write-Host "[build] Ship that single .exe. The vJoy driver must be installed on the target PC."
 } else {
-    Write-Error "[build] Build failed: dist\TruckRemoteServerV2.exe not found."
+    Write-Error "[build] Build failed: dist\GamepadTrucker.exe not found."
 }
