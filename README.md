@@ -21,19 +21,19 @@ real **wheel** — full lock-to-lock at any speed, with no gamepad steering assi
 - R2 / L2 → **throttle / brake** (vJoy Z / RZ axes)
 - right stick → **camera look** (vJoy RX / RY axes)
 - buttons + d-pad → **default keyboard keys** + a mouse action (no in-game setup)
-- optional: **DualSense lightbar shows engine RPM** (green → yellow → red)
+- optional: **lightbar shows engine RPM** (green → yellow → red), DualSense & DS4
 
-## DualSense lightbar = engine RPM (optional)
+## Lightbar = engine RPM (optional)
 
-With the SCS telemetry plugin installed, the DualSense lightbar turns green at
-low revs, yellow in the mid band and red near the redline (white while waiting
-for the game). Set up once:
+With the SCS telemetry plugin installed, the **DualSense or DualShock 4** lightbar
+turns green at low revs, yellow in the mid band and red near the redline (white
+while waiting for the game). Set up once:
 
 1. Click **Install telemetry plugin (ETS2/ATS)** in the app (auto-detects the
    Steam installs and copies `scs-telemetry.dll` into each game).
 2. Start the game; on first launch **allow** the telemetry access prompt.
 3. Drive — the lightbar follows the RPM. Toggle it with
-   *DualSense lightbar = engine RPM*.
+   *Lightbar = engine RPM*.
 
 ## What you need
 
@@ -77,24 +77,24 @@ the game's default keyboard keys):
 
 | Control | Action | Sends |
 |---------|--------|-------|
+| Touchpad (press) | Horn | H |
+| Cross | Beacon | O |
+| Circle | High beam | K |
+| Square | Parking brake | Space |
+| Triangle | Lights cycle | L |
+| L1 | Air horn | N |
+| R1 | Cruise control | C |
+| L3 | Wipers | P |
+| R3 (stick click) | View zoom | middle mouse |
 | D-pad ← / → | Turn signals | `[` / `]` |
 | D-pad ↑ | Hazard lights | F |
 | D-pad ↓ | Engine start/stop | E |
-| L1 / R1 | Gear down / up | G / R \* |
-| R3 (stick click) | View zoom | middle mouse \* |
-| Square | Parking brake | Space |
-| Triangle | Lights cycle | L |
-| Circle | High beam | K |
-| Cross | Horn | H |
-| L3 | Wipers | P |
-| Options | Cruise control | C |
-| Share | Air horn | N |
-| Touchpad | Attach/detach trailer | T |
-| PS | Menu | Esc |
+| Share | Map | M \* |
+| Options | Game menu | Esc |
 
-\* Gears and zoom aren't default keyboard actions: enable a manual gearbox and
-bind **Shift gear up/down** to `R`/`G`, and make sure view zoom is on the middle
-mouse button (default in most setups). Any key above can be rebound in the game.
+\* Map: bind the game's *Map* action to `M` if it isn't already. View zoom uses
+the middle mouse button (default in most setups). Any key above can be rebound
+in the game.
 
 ## Steering tuning (in-app)
 

@@ -1,37 +1,71 @@
-"""DualSense lightbar control via a HID output report.
+"""DualSense / DualShock 4 lightbar control via a HID output report.
 
 The lightbar RGB is set by an output report sent on the same HID handle we read
-from. Over USB it's report 0x02; over Bluetooth it's report 0x31 with a trailing
-CRC32 (seeded with the 0xA2 BT output-report tag). Layout follows the common
-DualSense output report (as used by pydualsense / DS4Windows).
+from. Bluetooth reports carry a trailing CRC32 (seeded with the 0xA2 BT
+output-report tag). Layouts follow the common reports used by pydualsense /
+DS4Windows.
+
+  DualSense : USB 0x02 (RGB @ 45..47)   BT 0x31 (RGB @ 46..48, +CRC)
+  DualShock4: USB 0x05 (RGB @ 6..8)     BT 0x11 (RGB @ 8..10,  +CRC)
 """
 
 import struct
 import zlib
 
-_FLAG0 = 0xFF          # enable rumble/trigger fields (harmless, kept 0 below)
-_FLAG1 = 0xF7          # bit 0x04 = allow lightbar color change
+# Surgical flags: change ONLY the lightbar, leave rumble/haptics untouched so we
+# don't fight the game's force feedback (which otherwise made the lightbar blink
+# back to default on bumps).
+_DS_FLAG0 = 0x00       # DualSense: don't touch rumble/triggers
+_DS_FLAG1 = 0x04       # DualSense: 0x04 = allow lightbar color
+_DS4_FLAGS = 0x06      # DS4: 0x02 lightbar color | 0x04 flash (no rumble bit 0x01)
 
 
-def build_report(bt, r, g, b):
+def build_report(kind, bt, r, g, b):
+    if kind == "ds4":
+        return _ds4_report(bt, r, g, b)
+    return _dualsense_report(bt, r, g, b)
+
+
+def _crc_tail(buf):
+    crc = zlib.crc32(b"\xA2" + bytes(buf[0:74])) & 0xFFFFFFFF
+    struct.pack_into("<I", buf, 74, crc)
+
+
+def _dualsense_report(bt, r, g, b):
     r &= 0xFF; g &= 0xFF; b &= 0xFF
     if bt:
         buf = bytearray(78)
         buf[0] = 0x31
         buf[1] = 0x02          # sequence/tag
-        buf[2] = _FLAG0
-        buf[3] = _FLAG1
+        buf[2] = _DS_FLAG0
+        buf[3] = _DS_FLAG1
         buf[46] = r; buf[47] = g; buf[48] = b
-        crc = zlib.crc32(b"\xA2" + bytes(buf[0:74])) & 0xFFFFFFFF
-        struct.pack_into("<I", buf, 74, crc)
+        _crc_tail(buf)
         return bytes(buf)
-    else:
-        buf = bytearray(48)
-        buf[0] = 0x02
-        buf[1] = _FLAG0
-        buf[2] = _FLAG1
-        buf[45] = r; buf[46] = g; buf[47] = b
+    buf = bytearray(48)
+    buf[0] = 0x02
+    buf[1] = _DS_FLAG0
+    buf[2] = _DS_FLAG1
+    buf[45] = r; buf[46] = g; buf[47] = b
+    return bytes(buf)
+
+
+def _ds4_report(bt, r, g, b):
+    r &= 0xFF; g &= 0xFF; b &= 0xFF
+    if bt:
+        buf = bytearray(78)
+        buf[0] = 0x11
+        buf[1] = 0xC0          # HID + CRC, poll rate 0
+        buf[2] = 0xA0
+        buf[3] = _DS4_FLAGS
+        buf[8] = r; buf[9] = g; buf[10] = b
+        _crc_tail(buf)
         return bytes(buf)
+    buf = bytearray(32)
+    buf[0] = 0x05
+    buf[1] = _DS4_FLAGS
+    buf[6] = r; buf[7] = g; buf[8] = b
+    return bytes(buf)
 
 
 def rpm_to_rgb(rpm, rpm_max):

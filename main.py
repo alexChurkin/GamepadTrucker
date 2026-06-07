@@ -13,7 +13,7 @@ from datetime import datetime
 import tkinter as tk
 from tkinter import ttk
 
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 
 from settings import Settings
 from vjoy_output import VJoyController
@@ -24,8 +24,8 @@ import telemetry as telem
 import dualsense_led
 
 BUTTON_REF = ("ETS2/ATS: bind vJoy axes - Steering=X, Throttle=Z, Brake=RZ, Look=RX/RY.\n"
-              "D-pad: signals (<,>), hazard (^), ignition (v).  L1/R1 gears down/up.\n"
-              "R3 = view zoom (mouse wheel).  Other buttons = default keys.")
+              "D-pad: signals (<,>), hazard (^), ignition (v).  L1 air horn, R1 cruise.\n"
+              "Touchpad = horn, Cross = beacon, R3 = view zoom.  Share = map, Options = menu.")
 
 
 def resource_path(name):
@@ -51,6 +51,8 @@ class App:
         self.manager = GamepadManager(on_state=self._on_state, on_status=self._on_status)
         self.telemetry = telem.Telemetry()
         self._tele_text = ""
+        self._last_rpm_rgb = None
+        self._last_active_t = 0.0
 
         self._build_ui()
         self.manager.start()
@@ -165,7 +167,7 @@ class App:
         ttk.Separator(p, orient="horizontal").grid(row=19, column=0, columnspan=2,
                                                    sticky="we", padx=10, pady=4)
         self.var_led = tk.BooleanVar(value=self.settings.led_rpm_enabled)
-        ttk.Checkbutton(p, text="DualSense lightbar = engine RPM (ETS2/ATS telemetry)",
+        ttk.Checkbutton(p, text="Lightbar = engine RPM (ETS2/ATS telemetry)",
                         variable=self.var_led, command=self._on_led).grid(
             row=20, column=0, columnspan=2, sticky="w", **pad)
         ttk.Button(p, text="Install telemetry plugin (ETS2/ATS)",
@@ -218,12 +220,18 @@ class App:
         if not self.settings.led_rpm_enabled:
             self._tele_text = ""
             return
+        now = time.perf_counter()
         t = self.telemetry.read()
         if t and t["active"]:
-            self.manager.set_led(dualsense_led.rpm_to_rgb(t["rpm"], t["rpm_max"]))
+            rgb = dualsense_led.rpm_to_rgb(t["rpm"], t["rpm_max"])
+            self._last_rpm_rgb = rgb
+            self._last_active_t = now
+            self.manager.set_led(rgb)
             self._tele_text = "Telemetry %s: %d rpm" % (t["game"], int(t["rpm"]))
+        elif self._last_rpm_rgb is not None and (now - self._last_active_t) < 2.0:
+            self.manager.set_led(self._last_rpm_rgb)   # hold through brief dropouts
         else:
-            self.manager.set_led((255, 255, 255))   # white standby until game seen
+            self.manager.set_led((255, 255, 255))      # white standby until game seen
             self._tele_text = "Telemetry: waiting for game..."
 
     def _on_reset_defaults(self):

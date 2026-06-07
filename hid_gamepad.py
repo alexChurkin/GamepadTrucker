@@ -260,8 +260,8 @@ class GamepadManager:
                     continue
                 if not self.has_motion:
                     self._status("{} active (gyro on)".format(self.name), True, True)
-                if self.kind == "dualsense":
-                    self.bt = (data[0] == 0x31)
+                if self.kind in ("dualsense", "ds4"):
+                    self.bt = data[0] in (0x31, 0x11)   # DualSense/DS4 BT report
                     self._apply_led(dev)
                 if self.on_state:
                     self.on_state(st)
@@ -291,7 +291,7 @@ class GamepadManager:
             return
         try:
             import dualsense_led
-            report = bytearray(dualsense_led.build_report(self.bt, rgb[0], rgb[1], rgb[2]))
+            report = bytearray(dualsense_led.build_report(self.kind, self.bt, rgb[0], rgb[1], rgb[2]))
             if self._out_len and len(report) < self._out_len:   # Windows wants full length
                 report += bytes(self._out_len - len(report))
             dev.write(bytes(report))

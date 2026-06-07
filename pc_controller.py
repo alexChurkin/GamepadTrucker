@@ -10,18 +10,17 @@ import keyboard_emu as kb
 # slot -> action. ("key", <name>) sends a keyboard key; ("mouse", "middle")
 # clicks the middle mouse button (view zoom).
 BUTTON_ACTIONS = {
-    "cross": ("key", "H"),        # horn
+    "cross": ("key", "O"),        # beacon
     "circle": ("key", "K"),       # high beam
     "square": ("key", "Space"),   # parking / hand brake
     "triangle": ("key", "L"),     # lights cycle
-    "l1": ("key", "G"),           # gear down  (manual shift)
-    "r1": ("key", "R"),           # gear up    (manual shift)
+    "l1": ("key", "N"),           # air horn
+    "r1": ("key", "C"),           # cruise control
     "l3": ("key", "P"),           # wipers
     "r3": ("mouse", "middle"),    # view zoom (like clicking the mouse wheel)
-    "options": ("key", "C"),      # cruise control
-    "share": ("key", "N"),        # air horn
-    "ps": ("key", "Esc"),         # menu
-    "touchpad": ("key", "T"),     # attach/detach trailer
+    "options": ("key", "Esc"),    # game menu
+    "share": ("key", "M"),        # map
+    "touchpad": ("key", "H"),     # main horn (press the touchpad to honk)
     "dpad_left": ("key", "LBracket"),   # left turn signal  ([)
     "dpad_right": ("key", "RBracket"),  # right turn signal (])
     "dpad_up": ("key", "F"),          # hazard lights
@@ -29,7 +28,7 @@ BUTTON_ACTIONS = {
 }
 
 _PLAIN = ("cross", "circle", "square", "triangle", "l1", "r1",
-          "l3", "r3", "options", "share", "ps", "touchpad")
+          "l3", "r3", "options", "share", "touchpad")
 
 
 def _dpad_dirs(dpad):
