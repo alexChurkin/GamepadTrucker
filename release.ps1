@@ -11,18 +11,27 @@
 #   3. package dist\GamepadTrucker-<version>.zip
 #        (GamepadTrucker.exe + setup_vjoy.ps1 + READ_ME_FIRST.txt)
 #   4. create + push git tag v<version>
-#   5. create the GitHub release and upload the .zip (needs the gh CLI; if gh
-#      is missing it prints the manual upload step instead)
+#   5. create the GitHub release and upload the .zip
+#
+# Publishing the release uses, in order of preference:
+#   - the gh CLI, if installed (run 'gh auth login' once), or
+#   - a GitHub token in $env:GITHUB_TOKEN (or a .github_token file next to
+#     this script), via the REST API - no install needed. Use a token with
+#     Contents: write on the repo.
+# If neither is available the tag is still pushed and the manual upload step
+# is printed.
 #
 # Flags:
 #   -SkipBuild   reuse the existing dist\GamepadTrucker.exe
 #   -NoPush      do everything locally, do not push the tag or touch GitHub
 #   -Notes "..." release notes text (default is a one-line note)
+#   -Repo "owner/name"  override the target repo (default: parsed from origin)
 
 param(
     [switch]$SkipBuild,
     [switch]$NoPush,
-    [string]$Notes
+    [string]$Notes,
+    [string]$Repo
 )
 
 $ErrorActionPreference = "Stop"
@@ -102,21 +111,71 @@ git push origin $tag
 # --- 4. GitHub release -----------------------------------------------------
 if (-not $Notes) { $Notes = "GamepadTrucker $ver" }
 
-$gh = Get-Command gh -ErrorAction SilentlyContinue
+# Resolve target repo (owner/name) from the origin remote if not given.
+if (-not $Repo) {
+    $origin = (git remote get-url origin)
+    if ($origin -match '[:/]([^/:]+)/([^/]+?)(?:\.git)?$') {
+        $Repo = "$($matches[1])/$($matches[2])"
+    }
+}
+
+# Locate gh: PATH first, then the portable install location.
+$gh = (Get-Command gh -ErrorAction SilentlyContinue).Source
+if (-not $gh) {
+    foreach ($p in @("$env:LOCALAPPDATA\Programs\gh\bin\gh.exe",
+                     "$env:ProgramFiles\GitHub CLI\gh.exe")) {
+        if (Test-Path $p) { $gh = $p; break }
+    }
+}
 if ($gh) {
-    Write-Host "[release] Creating GitHub release $tag via gh..."
-    $exists = (gh release view $tag 2>$null)
+    Write-Host "[release] Creating GitHub release $tag via gh ($gh)..."
+    & $gh release view $tag 2>$null | Out-Null
     if ($LASTEXITCODE -eq 0) {
-        gh release upload $tag $zip --clobber
+        & $gh release upload $tag $zip --clobber
     } else {
-        gh release create $tag $zip --title "GamepadTrucker $ver" --notes $Notes
+        & $gh release create $tag $zip --title "GamepadTrucker $ver" --notes $Notes
     }
     Write-Host "[release] Done. Release $tag published with $zip." -ForegroundColor Green
-} else {
-    Write-Host ""
-    Write-Host "[release] gh CLI not found - tag pushed, but the release was not created." -ForegroundColor Yellow
-    Write-Host "          Finish it one of two ways:" -ForegroundColor Yellow
-    Write-Host "  A) Install gh, run 'gh auth login' once, then re-run release.ps1 -SkipBuild." -ForegroundColor Yellow
-    Write-Host "  B) Open the repo Releases page, draft a release for tag $tag," -ForegroundColor Yellow
-    Write-Host "     and upload $zip as the asset." -ForegroundColor Yellow
+    exit 0
 }
+
+# No gh - try a token via REST API.
+$token = $env:GITHUB_TOKEN
+if (-not $token) { $token = $env:GH_TOKEN }
+if (-not $token -and (Test-Path ".\.github_token")) {
+    $token = (Get-Content ".\.github_token" -Raw).Trim()
+}
+
+if ($token -and $Repo) {
+    Write-Host "[release] Creating GitHub release $tag via REST API ($Repo)..."
+    $headers = @{
+        Authorization          = "Bearer $token"
+        "Accept"               = "application/vnd.github+json"
+        "X-GitHub-Api-Version" = "2022-11-28"
+        "User-Agent"           = "GamepadTrucker-release"
+    }
+    $body = @{ tag_name = $tag; name = "GamepadTrucker $ver"; body = $Notes } | ConvertTo-Json
+    try {
+        $rel = Invoke-RestMethod -Method Post -Headers $headers `
+            -Uri "https://api.github.com/repos/$Repo/releases" -Body $body -ContentType "application/json"
+    } catch {
+        # Release may already exist - fetch it by tag.
+        $rel = Invoke-RestMethod -Headers $headers `
+            -Uri "https://api.github.com/repos/$Repo/releases/tags/$tag"
+    }
+    $name = [IO.Path]::GetFileName($zip)
+    $uploadUrl = ($rel.upload_url -replace '\{.*\}', '') + "?name=$name"
+    Invoke-RestMethod -Method Post -Headers $headers -Uri $uploadUrl `
+        -InFile $zip -ContentType "application/zip" | Out-Null
+    Write-Host "[release] Done. Release $tag published with $name -> $($rel.html_url)" -ForegroundColor Green
+    exit 0
+}
+
+Write-Host ""
+Write-Host "[release] Tag pushed, but no gh CLI and no token, so the release was not created." -ForegroundColor Yellow
+Write-Host "          Finish it one of these ways:" -ForegroundColor Yellow
+Write-Host "  A) Set a token once:  `$env:GITHUB_TOKEN = '<PAT with Contents:write>'" -ForegroundColor Yellow
+Write-Host "     then re-run:        release.ps1 -SkipBuild" -ForegroundColor Yellow
+Write-Host "  B) Install gh, run 'gh auth login' once, then re-run release.ps1 -SkipBuild." -ForegroundColor Yellow
+Write-Host "  C) Open the repo Releases page, draft a release for tag $tag, upload:" -ForegroundColor Yellow
+Write-Host "       $zip" -ForegroundColor Yellow
