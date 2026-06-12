@@ -128,13 +128,22 @@ if (-not $gh) {
     }
 }
 if ($gh) {
+    $repoArgs = @(); if ($Repo) { $repoArgs = @("--repo", $Repo) }
     Write-Host "[release] Creating GitHub release $tag via gh ($gh)..."
-    & $gh release view $tag 2>$null | Out-Null
-    if ($LASTEXITCODE -eq 0) {
-        & $gh release upload $tag $zip --clobber
+    # gh writes normal status to stderr; under EAP=Stop that would terminate the
+    # script, so probe/publish with EAP relaxed and gate on the exit code.
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    & $gh release view $tag @repoArgs *> $null
+    $exists = ($LASTEXITCODE -eq 0)
+    if ($exists) {
+        & $gh release upload $tag $zip @repoArgs --clobber
     } else {
-        & $gh release create $tag $zip --title "GamepadTrucker $ver" --notes $Notes
+        & $gh release create $tag $zip @repoArgs --title "GamepadTrucker $ver" --notes $Notes
     }
+    $rc = $LASTEXITCODE
+    $ErrorActionPreference = $prevEAP
+    if ($rc -ne 0) { Write-Error "gh failed (exit $rc)."; exit 1 }
     Write-Host "[release] Done. Release $tag published with $zip." -ForegroundColor Green
     exit 0
 }
