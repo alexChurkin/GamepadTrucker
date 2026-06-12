@@ -5,3 +5,6 @@ __pycache__/
 *.pyc
 settings.json
 data_*.csv
+
+# Local GitHub token used by release.ps1 (never commit)
+.github_token
