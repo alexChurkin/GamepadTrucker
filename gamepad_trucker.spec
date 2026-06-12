@@ -12,6 +12,7 @@ from PyInstaller.utils.hooks import collect_data_files
 # Bundle pyvjoy's native vJoyInterface.dll (under pyvjoy/utils/<arch>/).
 datas = collect_data_files('pyvjoy')
 datas += [('app_icon.ico', '.')]  # window icon, loaded via iconbitmap
+datas += [('VERSION', '.')]  # single source of truth for the version string
 datas += [('plugins/win_x64/scs-telemetry.dll', 'plugins/win_x64'),
           ('plugins/win_x86/scs-telemetry.dll', 'plugins/win_x86')]  # telemetry plugin
 

@@ -20,7 +20,15 @@ from hid_gamepad import GamepadManager
 import telemetry as telem
 import dualsense_led
 
-__version__ = "0.1.6"
+def _read_version():
+    try:
+        with open(resource("VERSION"), encoding="utf-8") as f:
+            return f.read().strip()
+    except Exception:
+        return "dev"
+
+
+__version__ = _read_version()
 
 BUTTON_REF = ("ETS2/ATS: bind vJoy axes - Steering=X, Throttle=Z, Brake=RZ, Look=RX/RY.\n"
               "D-pad: signals (<,>), hazard (^), ignition (v).  L1 air horn, R1 cruise.\n"
